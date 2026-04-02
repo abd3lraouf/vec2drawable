@@ -46,8 +46,7 @@ export async function vdConvert(
         {
           name: 'preset-default',
         },
-        'removeViewBox', // remove it after the preset
-      ] as any,
+      ],
     }
     const optimized = svgoOptimize(svgText, config)
     svgText = optimized.data
