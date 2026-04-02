@@ -90,6 +90,93 @@ interface ParseContext {
 }
 
 // ---------------------------------------------------------------------------
+// Shape conversion helpers
+// ---------------------------------------------------------------------------
+
+function rectToPath(el: Element): string | null {
+  const x = parseDimension(getAttr(el, 'x')) ?? 0
+  const y = parseDimension(getAttr(el, 'y')) ?? 0
+  const w = parseDimension(getAttr(el, 'width')) ?? 0
+  const h = parseDimension(getAttr(el, 'height')) ?? 0
+  const rx = parseDimension(getAttr(el, 'rx')) ?? 0
+  const ry = parseDimension(getAttr(el, 'ry')) ?? 0
+
+  if (w <= 0 || h <= 0) return null
+
+  if (rx > 0 || ry > 0) {
+    // Rounded rect — complex path
+    const rX = Math.min(rx || ry, w / 2)
+    const rY = Math.min(ry || rx, h / 2)
+    return `M${x + rX},${y} h${w - 2 * rX} a${rX},${rY} 0 0 1 ${rX},${rY} v${h - 2 * rY} a${rX},${rY} 0 0 1 -${rX},${rY} h-${w - 2 * rX} a${rX},${rY} 0 0 1 -${rX},-${rY} v-${h - 2 * rY} a${rX},${rY} 0 0 1 ${rX},-${rY} z`
+  }
+
+  return `M${x},${y} h${w} v${h} h${-w} z`
+}
+
+function circleToPath(el: Element): string | null {
+  const cx = parseDimension(getAttr(el, 'cx')) ?? 0
+  const cy = parseDimension(getAttr(el, 'cy')) ?? 0
+  const r = parseDimension(getAttr(el, 'r')) ?? 0
+  if (r <= 0) return null
+  return `M${cx - r},${cy} a${r},${r} 0 1,0 ${2 * r},0 a${r},${r} 0 1,0 ${-2 * r},0`
+}
+
+function ellipseToPath(el: Element): string | null {
+  const cx = parseDimension(getAttr(el, 'cx')) ?? 0
+  const cy = parseDimension(getAttr(el, 'cy')) ?? 0
+  const rx = parseDimension(getAttr(el, 'rx')) ?? 0
+  const ry = parseDimension(getAttr(el, 'ry')) ?? 0
+  if (rx <= 0 || ry <= 0) return null
+  return `M${cx - rx},${cy} a${rx},${ry} 0 1,0 ${2 * rx},0 a${rx},${ry} 0 1,0 ${-2 * rx},0`
+}
+
+function lineToPath(el: Element): string | null {
+  const x1 = parseDimension(getAttr(el, 'x1')) ?? 0
+  const y1 = parseDimension(getAttr(el, 'y1')) ?? 0
+  const x2 = parseDimension(getAttr(el, 'x2')) ?? 0
+  const y2 = parseDimension(getAttr(el, 'y2')) ?? 0
+  return `M${x1},${y1} L${x2},${y2}`
+}
+
+function polyToPath(el: Element, close: boolean): string | null {
+  const pointsStr = getAttr(el, 'points') || ''
+  const points = pointsStr.trim().split(/[\s,]+/).map(Number)
+  if (points.length < 2 || points.some(isNaN)) return null
+  let d = `M${points[0]},${points[1]}`
+  for (let i = 2; i < points.length; i += 2) {
+    if (i + 1 < points.length) d += ` L${points[i]},${points[i + 1]}`
+  }
+  if (close) d += ' z'
+  return d
+}
+
+function parseTransform(transformStr: string | null): Partial<VdGroup> {
+  if (!transformStr) return {}
+  const res: Partial<VdGroup> = {}
+  const re = /(translate|rotate|scale|matrix)\(([^)]+)\)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(transformStr)) !== null) {
+    const fn = m[1].toLowerCase()
+    const args = m[2].split(/[\s,]+/).map(Number).filter(n => !isNaN(n))
+
+    if (fn === 'translate' && args.length >= 1) {
+      res.translateX = (res.translateX || 0) + args[0]
+      res.translateY = (res.translateY || 0) + (args[1] || 0)
+    } else if (fn === 'scale' && args.length >= 1) {
+      res.scaleX = args[0]
+      res.scaleY = args[1] !== undefined ? args[1] : args[0]
+    } else if (fn === 'rotate' && args.length >= 1) {
+      res.rotation = (res.rotation || 0) + args[0]
+      if (args.length >= 3) {
+        res.pivotX = args[1]
+        res.pivotY = args[2]
+      }
+    }
+  }
+  return res
+}
+
+// ---------------------------------------------------------------------------
 // Element processing
 // ---------------------------------------------------------------------------
 
@@ -99,8 +186,8 @@ function processElement(el: Element, ctx: ParseContext): VdNode | null {
   // ── <use> — unresolved reference error ────────────────────────────────────
   if (tag === 'use') {
     const href = getAttr(el, 'xlink:href') ||
-                 el.getAttributeNS('http://www.w3.org/1999/xlink', 'href') ||
-                 getAttr(el, 'href')
+      el.getAttributeNS('http://www.w3.org/1999/xlink', 'href') ||
+      getAttr(el, 'href')
     if (href && href.startsWith('#')) {
       const lineNum = (el as unknown as { lineNumber?: number }).lineNumber
       const lineStr = lineNum !== undefined ? ` @ line ${lineNum}` : ''
@@ -115,23 +202,58 @@ function processElement(el: Element, ctx: ParseContext): VdNode | null {
     return null
   }
 
-  // ── <path> ────────────────────────────────────────────────────────────────
-  if (tag === 'path') {
-    const d = getAttr(el, 'd')
+  // ── Visual elements ───────────────────────────────────────────────────────
+  const shapes: Record<string, (el: Element) => string | null> = {
+    path: (el) => getAttr(el, 'd'),
+    rect: rectToPath,
+    circle: circleToPath,
+    ellipse: ellipseToPath,
+    line: lineToPath,
+    polyline: (el) => polyToPath(el, false),
+    polygon: (el) => polyToPath(el, true),
+  }
+
+  if (shapes[tag]) {
+    const d = shapes[tag](el)
     if (!d) return null
 
     // Own attrs take precedence; fall back to inherited context
-    const ownFill   = getAttr(el, 'fill')
+    const ownFill = getAttr(el, 'fill')
     const ownStroke = getAttr(el, 'stroke')
 
-    const fill   = (ownFill   !== null) ? ownFill   : ctx.fillColor
+    const fill = (ownFill !== null) ? ownFill : ctx.fillColor
     const stroke = (ownStroke !== null) ? ownStroke : ctx.strokeColor
+
+    const strokeWidth = getAttr(el, 'stroke-width')
+    const fillRule = getAttr(el, 'fill-rule') || getAttr(el, 'clip-rule')
+    const fillOpacity = getAttr(el, 'fill-opacity') || getAttr(el, 'opacity')
+    const strokeOpacity = getAttr(el, 'stroke-opacity') || getAttr(el, 'opacity')
+    const strokeLineCap = getAttr(el, 'stroke-linecap') as any
+    const strokeLineJoin = getAttr(el, 'stroke-linejoin') as any
 
     const path: VdPath = {
       type: 'path',
       pathData: convertPathData(d),
-      fillColor:   normaliseColor(fill),
+      fillColor: normaliseColor(fill),
       strokeColor: normaliseColor(stroke),
+      strokeWidth: strokeWidth ? parseFloat(strokeWidth) : undefined,
+      fillAlpha: fillOpacity ? parseFloat(fillOpacity) : undefined,
+      strokeAlpha: strokeOpacity ? parseFloat(strokeOpacity) : undefined,
+      strokeLineCap: strokeLineCap || undefined,
+      strokeLineJoin: strokeLineJoin || undefined,
+      fillType: fillRule === 'evenodd' ? 'evenOdd' : (fillRule === 'nonzero' ? 'nonZero' : undefined)
+    }
+
+    const transformStr = getAttr(el, 'transform')
+    if (transformStr) {
+      const transform = parseTransform(transformStr)
+      if (Object.keys(transform).length > 0) {
+        return {
+          type: 'group',
+          ...transform,
+          children: [path]
+        }
+      }
     }
     return path
   }
@@ -150,15 +272,22 @@ function processElement(el: Element, ctx: ParseContext): VdNode | null {
     const children = processChildren(el, childCtx)
     if (children.length === 0) return null
 
-    return {
+    const g: VdGroup = {
       type: 'group',
       name: getAttr(el, 'id') ?? undefined,
       children,
     }
+
+    const transformStr = getAttr(el, 'transform')
+    if (transformStr) {
+      Object.assign(g, parseTransform(transformStr))
+    }
+
+    return g
   }
 
-  // ── Visual elements we don't support → WARNING ────────────────────────────
-  const visual = ['circle', 'rect', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'image']
+  // ── Other elements we don't support → WARNING ────────────────────────────
+  const visual = ['text', 'image']
   if (visual.includes(tag)) {
     const lineNum = (el as unknown as { lineNumber?: number }).lineNumber
     const lineStr = lineNum !== undefined ? ` @ line ${lineNum}` : ''
@@ -193,7 +322,8 @@ function flattenGroups(nodes: VdNode[]): VdNode[] {
       // group
       const flat = flattenGroups(node.children)
       const hasTransform = node.translateX !== undefined || node.translateY !== undefined ||
-        node.rotation !== undefined || node.scaleX !== undefined || node.scaleY !== undefined
+        node.rotation !== undefined || node.scaleX !== undefined || node.scaleY !== undefined ||
+        node.pivotX !== undefined || node.pivotY !== undefined
       if (hasTransform) {
         out.push({ ...node, children: flat })
       } else {

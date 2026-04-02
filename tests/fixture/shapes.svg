@@ -1,0 +1,17 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rects -->
+  <rect x="10" y="10" width="40" height="30" fill="red" />
+  <rect x="60" y="10" width="40" height="30" rx="5" ry="5" fill="blue" />
+  
+  <!-- Circle & Ellipse -->
+  <circle cx="30" cy="80" r="20" fill="green" stroke="black" stroke-width="2" />
+  <ellipse cx="100" cy="80" rx="40" ry="20" fill="yellow" stroke="purple" stroke-width="1" />
+
+  <!-- Line & Polygons -->
+  <line x1="10" y1="120" x2="190" y2="120" stroke="black" stroke-width="5" stroke-linecap="round" />
+  <polyline points="10,140 30,160 50,140 70,160" fill="none" stroke="red" stroke-width="3" stroke-linejoin="round" />
+  <polygon points="100,140 120,180 80,180" fill="orange" stroke="black" stroke-opacity="0.5" fill-opacity="0.8" />
+  
+  <!-- Fill Type -->
+  <path d="M150,140 h40 v40 h-40 z M160,150 h20 v20 h-20 z" fill="blue" fill-rule="evenodd" />
+</svg>

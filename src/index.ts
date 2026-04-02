@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { optimize as svgoOptimize, Config as SvgoConfig } from 'svgo'
 import { parseSvgToVd } from './svg-to-vd'
 import { writeVdXml } from './vd-xml-writer'
 
@@ -13,6 +14,7 @@ export type VdConvertOptions = {
   width?: number     // force width in DP
   height?: number    // force height in DP
   addHeader?: boolean // add AOSP licence header
+  optimize?: boolean // use SVGO to optimize input SVG
 }
 
 export type VdConvertResult = {
@@ -32,15 +34,35 @@ export async function vdConvert(
   input: string,
   options: VdConvertOptions = {}
 ): Promise<VdConvertResult> {
-  const { outDir, width, height, addHeader = false } = options
+  const { outDir, width, height, addHeader = false, optimize = false } = options
 
-  const svgText = fs.readFileSync(input, 'utf8')
+  let svgText = fs.readFileSync(input, 'utf8')
+
+  if (optimize) {
+    const config: SvgoConfig = {
+      path: input,
+      multipass: true,
+      plugins: [
+        {
+          name: 'preset-default',
+        },
+        'removeViewBox', // remove it after the preset
+      ] as any,
+    }
+    const optimized = svgoOptimize(svgText, config)
+    svgText = optimized.data
+  }
+
   const { tree, messages } = parseSvgToVd(svgText, width, height)
   const xml = writeVdXml(tree, addHeader)
 
   const { dir, name } = path.parse(input)
   const outputDir = outDir ?? dir
   const output = path.join(outputDir, name + '.xml')
+
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true })
+  }
 
   fs.writeFileSync(output, xml, 'utf8')
 
@@ -81,19 +103,22 @@ export async function vdTool(
   let widthDp: number | undefined
   let heightDp: number | undefined
   let addHeader = false
+  let optimize = false
 
   const argList = Array.from(args)
   for (let i = 0; i < argList.length; i++) {
     const a = argList[i]
     switch (a) {
-      case '-c':   convert = true; break
-      case '-d':   display = true; break
-      case '-in':  inPath = argList[++i]; break
+      case '-c': convert = true; break
+      case '-d': display = true; break
+      case '-in': inPath = argList[++i]; break
       case '-out': outDir = argList[++i]; break
-      case '-widthDp':  widthDp = parseInt(argList[++i], 10); break
+      case '-widthDp': widthDp = parseInt(argList[++i], 10); break
       case '-heightDp': heightDp = parseInt(argList[++i], 10); break
       case '-addHeader':
       case '--addHeader': addHeader = true; break
+      case '-optimize':
+      case '--optimize': optimize = true; break
       default:
         write(stderr, `Unknown option: ${a}`)
     }
@@ -112,8 +137,9 @@ export async function vdTool(
   const stat = fs.statSync(inPath)
   const svgFiles = stat.isDirectory()
     ? fs.readdirSync(inPath)
-        .filter(f => f.toLowerCase().endsWith('.svg'))
-        .map(f => path.join(inPath!, f))
+      .filter(f => f.toLowerCase().endsWith('.svg'))
+      .filter(f => !f.startsWith('.'))
+      .map(f => path.join(inPath!, f))
     : [inPath]
 
   if (svgFiles.length === 0) {
@@ -122,7 +148,7 @@ export async function vdTool(
   }
 
   for (const svgFile of svgFiles) {
-    const result = await vdConvert(svgFile, { outDir, width: widthDp, height: heightDp, addHeader })
+    const result = await vdConvert(svgFile, { outDir, width: widthDp, height: heightDp, addHeader, optimize })
     for (const msg of result.errors ?? []) write(stderr, msg)
     for (const msg of result.warnings ?? []) write(stderr, msg)
 
@@ -137,7 +163,7 @@ function printUsage(out: NodeJS.WritableStream) {
   out.write(`
 Converts SVG files to VectorDrawable XML files.
 Displays VectorDrawables.
-Usage: [-c] [-d] [-in <file or directory>] [-out <directory>] [-widthDp <size>] [-heightDp <size>] [-addHeader]
+Usage: [-c] [-d] [-in <file or directory>] [-out <directory>] [-widthDp <size>] [-heightDp <size>] [-addHeader] [-optimize]
 Options:
   -in <file or directory>  If -c is specified, converts the given .svg file
                            to VectorDrawable XML, or if a directory is specified,
@@ -149,9 +175,10 @@ Options:
   -widthDp <size>          Force the width to be <size> dp (integer).
   -heightDp <size>         Force the height to be <size> dp (integer).
   -addHeader               Add AOSP licence header to the top of the generated XML.
+  -optimize                Run SVGO optimization on input SVG files before conversion.
 Examples:
   vec2drawable -c -in icon.svg
   vec2drawable -c -d -in icons/ -out drawable/
-  vec2drawable -c -in icon.svg -widthDp 24 -heightDp 24
+  vec2drawable -c -in icon.svg -widthDp 24 -heightDp 24 -optimize
 `.trimStart())
 }

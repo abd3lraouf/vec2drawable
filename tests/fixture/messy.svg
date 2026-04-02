@@ -1,0 +1,10 @@
+<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Messy metadata and redundant groups -->
+  <metadata>Should be removed</metadata>
+  <g id="outer">
+    <g id="inner">
+      <path d="M 10 10 L 20 10 L 20 20 L 10 20 Z" fill="#FF0000" />
+    </g>
+  </g>
+  <desc>Unnecessary</desc>
+</svg>

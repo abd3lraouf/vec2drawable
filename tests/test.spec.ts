@@ -80,10 +80,65 @@ describe('vec2drawable', () => {
     // SVG unsupported elements should throw warnings
     expect(result.warnings).toBeDefined()
     expect(result.warnings!.length).toBeGreaterThan(0)
-    expect(result.warnings!.some(w => w.includes('<rect>'))).toBe(true)
-    expect(result.warnings!.some(w => w.includes('<circle>'))).toBe(true)
     expect(result.warnings!.some(w => w.includes('<text>'))).toBe(true)
     const xml = fs.readFileSync(path.join(outDir, 'unsupported.xml'), 'utf8')
     expect(xml).toMatchSnapshot()
+  })
+
+  it('converts basic SVG shapes and path properties correctly', async () => {
+    const fixture = path.join(__dirname, 'fixture', 'shapes.svg')
+    const outDir = path.join(__dirname, 'output')
+    fs.mkdirSync(outDir, { recursive: true })
+
+    const result = await vdConvert(fixture, { outDir })
+    expect(result.errors).toBeUndefined()
+    
+    // We expect 8 paths in the shapes fixture
+    const xml = fs.readFileSync(path.join(outDir, 'shapes.xml'), 'utf8')
+    expect(xml.match(/<path/g)?.length).toBe(8)
+    expect(xml).toContain('android:strokeLineCap="round"')
+    expect(xml).toContain('android:strokeLineJoin="round"')
+    expect(xml).toContain('android:fillAlpha="0.8"')
+    expect(xml).toContain('android:strokeAlpha="0.5"')
+    expect(xml).toContain('android:fillType="evenOdd"')
+    expect(xml).toMatchSnapshot()
+  })
+
+  it('handles complex SVG transformations on groups and paths correctly', async () => {
+    const fixture = path.join(__dirname, 'fixture', 'complex-transforms.svg')
+    const outDir = path.join(__dirname, 'output')
+    fs.mkdirSync(outDir, { recursive: true })
+
+    const result = await vdConvert(fixture, { outDir })
+    expect(result.errors).toBeUndefined()
+    
+    const xml = fs.readFileSync(path.join(outDir, 'complex-transforms.xml'), 'utf8')
+    // Should have multiple <group> tags due to transformations
+    expect(xml.match(/<group/g)?.length).toBeGreaterThan(1)
+    expect(xml).toContain('android:translateX="10"')
+    expect(xml).toContain('android:translateY="20"')
+    expect(xml).toContain('android:scaleX="1.5"')
+    expect(xml).toContain('android:rotation="45"')
+    expect(xml).toContain('android:pivotX="5"')
+    expect(xml).toContain('android:pivotY="5"')
+    expect(xml).toMatchSnapshot()
+  })
+
+  it('optimizes SVG using SVGO when requested', async () => {
+    const fixture = path.join(__dirname, 'fixture', 'messy.svg')
+    const outDir = path.join(__dirname, 'output')
+    fs.mkdirSync(outDir, { recursive: true })
+
+    // No optimize
+    const resultNormal = await vdConvert(fixture, { outDir: outDir + '/normal' })
+    const xmlNormal = fs.readFileSync(path.join(outDir, 'normal', 'messy.xml'), 'utf8')
+    
+    // With optimize
+    const resultOpt = await vdConvert(fixture, { outDir: outDir + '/opt', optimize: true })
+    const xmlOpt = fs.readFileSync(path.join(outDir, 'opt', 'messy.xml'), 'utf8')
+    
+    // Optimization typically collapses redundant groups and simplifies colors
+    expect(xmlOpt.length).toBeLessThanOrEqual(xmlNormal.length)
+    expect(xmlOpt).toMatchSnapshot()
   })
 })

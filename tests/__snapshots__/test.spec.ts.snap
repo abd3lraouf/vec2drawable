@@ -1,5 +1,51 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`vec2drawable converts basic SVG shapes and path properties correctly 1`] = `
+"<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+  <path
+      android:pathData="M10,10 h40 v30 h-40 z"
+      android:fillColor="#FF0000"/>
+  <path
+      android:pathData="M65,10 h30 a5,5,0,0,1,5,5 v20 a5,5,0,0,1,-5,5 h-30 a5,5,0,0,1,-5,-5 v-20 a5,5,0,0,1,5,-5 z"
+      android:fillColor="#0000FF"/>
+  <path
+      android:pathData="M10,80 a20,20,0,1,0,40,0 a20,20,0,1,0,-40,0"
+      android:fillColor="#008000"
+      android:strokeColor="#000000"
+      android:strokeWidth="2"/>
+  <path
+      android:pathData="M60,80 a40,20,0,1,0,80,0 a40,20,0,1,0,-80,0"
+      android:fillColor="#FFFF00"
+      android:strokeColor="#800080"
+      android:strokeWidth="1"/>
+  <path
+      android:pathData="M10,120 L190,120"
+      android:strokeColor="#000000"
+      android:strokeWidth="5"
+      android:strokeLineCap="round"/>
+  <path
+      android:pathData="M10,140 L30,160 L50,140 L70,160"
+      android:strokeColor="#FF0000"
+      android:strokeWidth="3"
+      android:strokeLineJoin="round"/>
+  <path
+      android:pathData="M100,140 L120,180 L80,180 z"
+      android:fillColor="#FFA500"
+      android:strokeColor="#000000"
+      android:strokeAlpha="0.5"
+      android:fillAlpha="0.8"/>
+  <path
+      android:pathData="M150,140 h40 v40 h-40 z M160,150 h20 v20 h-20 z"
+      android:fillColor="#0000FF"
+      android:fillType="evenOdd"/>
+</vector>
+"
+`;
+
 exports[`vec2drawable converts svg to VectorDrawable XML 1`] = `
 "<vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="504dp"
@@ -41,6 +87,50 @@ exports[`vec2drawable generates warnings for unsupported SVG elements 1`] = `
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+  <path
+      android:pathData="M0,0 h24 v24 h-24 z"
+      android:fillColor="#FF0000"/>
+  <path
+      android:pathData="M2,12 a10,10,0,1,0,20,0 a10,10,0,1,0,-20,0"/>
+</vector>
+"
+`;
+
+exports[`vec2drawable handles complex SVG transformations on groups and paths correctly 1`] = `
+"<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+  <group
+    android:translateX="10"
+    android:translateY="20"
+    android:scaleX="1.5"
+    android:scaleY="1.5">
+    <path
+        android:pathData="M0,0 h10 v10 h-10 z"
+        android:fillColor="#FF0000"/>
+  </group>
+  <group
+    android:translateX="50"
+    android:translateY="50"
+    android:rotation="45"
+    android:pivotX="5"
+    android:pivotY="5">
+    <path
+        android:pathData="M0,0 L10,0 L10,10 L0,10 Z"
+        android:fillColor="#0000FF"/>
+  </group>
+  <group
+    android:rotation="10">
+    <group
+      android:translateX="5"
+      android:translateY="5">
+      <path
+          android:pathData="M-5,0 a5,5,0,1,0,10,0 a5,5,0,1,0,-10,0"
+          android:fillColor="#008000"/>
+    </group>
+  </group>
 </vector>
 "
 `;
@@ -84,6 +174,19 @@ exports[`vec2drawable handles edge scenarios with path commands and formatting c
       android:pathData="M0.5,0.25 L-0.5,-0.25"/>
   <path
       android:pathData="M10,20 h50 v-10.5 C65.5,5.5,50,0,50,0 s-15.5,5.5,-20,9.5 S10,20,10,20 z"/>
+</vector>
+"
+`;
+
+exports[`vec2drawable optimizes SVG using SVGO when requested 1`] = `
+"<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+  <path
+      android:pathData="M10,10 h10 v10 H10 Z"
+      android:fillColor="#FF0000"/>
 </vector>
 "
 `;
