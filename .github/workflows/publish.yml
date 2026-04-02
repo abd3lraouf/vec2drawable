@@ -36,8 +36,8 @@ jobs:
         run: bun run build
 
       - name: Publish to NPM
-        # No 'registry-url' or 'NODE_AUTH_TOKEN' needed with Trusted Publishing/OIDC
-        run: npm publish --access public --provenance
+        # No 'NODE_AUTH_TOKEN' needed with Trusted Publishing/OIDC
+        run: npm publish --registry https://registry.npmjs.org/ --access public --provenance
 
   publish-github:
     name: Publish to GitHub Packages
@@ -71,7 +71,7 @@ jobs:
         run: bun run build
 
       - name: Publish to GitHub Packages
-        run: npm publish
+        run: npm publish --registry https://npm.pkg.github.com/
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
