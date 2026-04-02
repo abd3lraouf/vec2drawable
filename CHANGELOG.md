@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.0](https://github.com/abd3lraouf/vec2drawable/compare/v1.0.0...v1.1.0) (2026-04-02)
+
+
+### Features
+
+* Add support for shapes, transformations, and SVGO optimization ([e6acd9c](https://github.com/abd3lraouf/vec2drawable/commit/e6acd9cd0aa2d0a3db92a3f4e26a68fefc571d90))
+
+
+### Bug Fixes
+
+* **cli:** preserve viewBox during svgo optimization ([3e2b6ca](https://github.com/abd3lraouf/vec2drawable/commit/3e2b6ca6afafc577a7cc5510f6f9bae20af87085))
+
 ### [4.0.2](https://github.com/stasson/vd-tool/compare/v4.0.1...v4.0.2) (2021-12-17)
 
 ### [4.0.1](https://github.com/stasson/vd-tool/compare/v4.0.0...v4.0.1) (2021-12-17)
