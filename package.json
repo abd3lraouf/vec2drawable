@@ -41,6 +41,9 @@
     "url": "https://github.com/abd3lraouf/vec2drawable/issues"
   },
   "homepage": "https://github.com/abd3lraouf/vec2drawable#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
