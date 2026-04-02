@@ -71,7 +71,7 @@ jobs:
         run: bun run build
 
       - name: Publish to GitHub Packages
-        run: npm publish --registry https://npm.pkg.github.com/
+        run: npm publish --registry https://npm.pkg.github.com/ --no-provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
