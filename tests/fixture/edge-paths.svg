@@ -1,0 +1,10 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- scientific notation -->
+  <path d="M 1e2, 1.5e1 L 2E-2 3.14e+2 Z"/>
+  <!-- implicit l command from M -->
+  <path d="M 10 10 20 20 30 30"/>
+  <!-- fractional coordinates without leading zero -->
+  <path d="M .5 .25 L -.5 -.25"/>
+  <!-- missing spaces between commands and numbers -->
+  <path d="M10,20h50v-10.5C65.5,5.5,50,0,50,0s-15.5,5.5-20,9.5S10,20,10,20z"/>
+</svg>
